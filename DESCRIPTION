@@ -1,0 +1,37 @@
+Package: HOAL
+Title: Hidrological Open-Air Laboratory datasets and utility functions
+Version: 0.1.0
+Authors@R: 
+    person(given = "Lovrenc",
+           family = "Pavlin",
+           role = c("aut", "cre"),
+           email = "pavlin@hydro.tuwien.ac.at",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description:
+    This is a package of utility and plotting functions developed for the needs 
+    of PhD dealing with ground water in Hidrological Open-Air Laboratory (HOAL).
+Depends:
+    xts,
+    R (>= 3.0)
+Imports:
+    zoo,
+    lubridate,
+    hydroTSM,
+    data.table,
+    readxl,
+    rgdal,
+    sp,
+    dygraphs,
+    fANCOVA,
+    pracma,
+    htmltools,
+    scales,
+    stlplus,
+    RColorBrewer,
+    ggplot2
+Suggests:
+    HOALdata
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
