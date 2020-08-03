@@ -6,11 +6,13 @@ Authors@R:
            family = "Pavlin",
            role = c("aut", "cre"),
            email = "pavlin@hydro.tuwien.ac.at",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           comment = c(ORCID = "0000-0002-9352-0368"))
 Description:
     This is a package of utility and plotting functions developed for the needs 
     of PhD dealing with ground water in Hidrological Open-Air Laboratory (HOAL).
 Depends:
+    R (>= 3.0)
+Imports:
     xts,
     zoo,
     lubridate,
@@ -18,19 +20,19 @@ Depends:
     dygraphs,
     dplyr,
     data.table,
-    R (>= 3.0)
-Imports:
     hydroTSM,
     readxl,
     rgdal,
     sp,
+    stringr,
+    magrittr
+Suggests:
     fANCOVA,
     pracma,
     htmltools,
     scales,
     stlplus,
-    RColorBrewer
-Suggests:
+    RColorBrewer,
     HOALdata
 License: GPL-2
 Encoding: UTF-8
