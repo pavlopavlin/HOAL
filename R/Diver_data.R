@@ -55,22 +55,22 @@ MONread <- function(filename, tzone = "Etc/GMT-1"){
 MONcheck <- function(mon){
 
   # check periodicity of the xts object. Produces a list object
-  per <- periodicity(mon)
+  per <- xts::periodicity(mon)
 
   ## Round time stamps (e.g. 15:10:00, 15:15:00)
 
   # rounded first time stamp of the object to the nearest periodicity time stamp
   # e.g. "2016-12-20 12:13:09 +01" + periodicity "5 mins" -> "2016-12-20 12:15:00 +01"
-  st <- round_date(index(mon[1]), paste(per$frequency, per$units))
+  st <- lubridate::round_date(index(mon[1]), paste(per$frequency, per$units))
   #rounded last time stamp
-  ed <- round_date(index(last(mon)), paste(per$frequency, per$units))
+  ed <- lubridate::round_date(index(xts::last(mon)), paste(per$frequency, per$units))
 
   # check if time stamps are not already rounded
-  if (index(mon[1]) != st){
+  if (zoo::index(mon[1]) != st){
     # rounded time stamps grid
     g <- seq(st, ed, by = paste(per$frequency, per$units))
     # linear interpolation to rounded grid
-    mon <- na.approx(mon, xout = g, maxgap = 5)
+    mon <- zoo::na.approx(mon, xout = g, maxgap = 5)
     # round values
     mon[, 1] <- round(mon[, 1], digits = 1) #pDiver
     mon[, 2] <- round(mon[, 2], digits = 2) #TDiver
@@ -267,3 +267,69 @@ MONimport <- function(path, keywords, start, end){
 
   }# END if
 }# END function MONimport
+
+#------------------------------------------------------------------------------#
+
+#' Shifts the time-steps in MON data file
+#'
+#' @param filename character or character vector of paths to MON files to change.
+#' @param shift time shift in seconds.
+#' @param unit unit of time as character. Defaults to "hours".
+#'
+#' @return A MON file with changed data and a backup of the original data.
+#' @export
+#'
+MONshift <- function(filename, shift, unit = "hours"){
+  for(i in 1:length(filename)){
+    # read the MON file
+    ln <-readLines(filename[i])
+    len <- length(ln)
+    # line where data starts
+    data_ln <- grep(pattern = "(\\[Data\\])", x = ln) + 2
+    # number of lines of data
+    data_len <- as.numeric(ln[data_ln - 1])
+
+    # read the index and shift it
+    ind <- as.POSIXct(substr(ln[data_ln:(data_ln + data_len -1)],1,19), tz= "Etc/GMT-1")
+    ind <- ind + as.difftime(shift, units = unit)
+
+    # replace the index with the shifted one
+    substr(ln[data_ln:(data_ln + data_len -1)],1,19) <- as.character(ind, format ="%Y/%m/%d %H:%M:%S")
+
+    # New filename
+    filename_new <- paste(grep(x = strsplit(basename(filename[i]), split = "_")[[1]],
+                               pattern = "([[:alpha:]+])([[:digit:]+])", value = T),
+                          collapse = "_")
+    start <- format(ind[1], format = "%Y%m%d%H%M")
+    end <- format(ind[data_len], format = "%Y%m%d%H%M")
+
+    ## Replace timesteps in file header
+    # filename
+    ln_fn <- grep(pattern = "(FILENAME)", x = ln)
+    substr(ln[ln_fn],
+           start = stringr::str_locate(ln[ln_fn], "\\s*:\\s*")[2] + 1,
+           stop = nchar(ln[ln_fn])) <-
+      paste0(filename_new, "_", start, "_till_", end, ".MON")
+    # Start time
+    ln_st <- grep(pattern = "(Start date / time)", x = ln)
+    substr(ln[ln_st],
+           start = stringr::str_locate(ln[ln_st], "\\s*=")[2] + 1,
+           stop = nchar(ln[ln_st])) <-
+      format(ind[1], format = "%S:%M:%H %d/%m/%y")
+    # End time
+    ln_ed <- grep(pattern = "(End date / time)", x = ln)
+    substr(ln[ln_ed],
+           start = stringr::str_locate(ln[ln_ed], "\\s*=")[2] + 1,
+           stop = nchar(ln[ln_ed])) <-
+      format(ind[data_len], format = "%S:%M:%H %d/%m/%y")
+
+    ## write files ##
+    # backup original data
+    file.copy(filename[i], paste0(filename[i], "_backup"))
+    # new file
+    writeLines(ln, paste0(dirname(filename[i]), "/", filename_new, "_", start, "_till_", end, ".MON"))
+
+    # remove original file
+    fs::file_delete(filename[i])
+  }
+}

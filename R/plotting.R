@@ -1,5 +1,9 @@
 #==============================================================================#
-#Plotting ####
+##  Plotting  ##
+#==============================================================================#
+
+#==============================================================================#
+## dygraphs ####
 
 #' dygraphs plugin - highlights one time series
 #'
@@ -17,6 +21,38 @@ dyHighlighted <- function(dygraph){
                          "))%>%
     dyCrosshair(direction = "vertical")%>%
     dyOptions(useDataTimezone = T)
+}
+
+##----------------------------------------------------------------------------##
+
+#' Shading effect for dygraph
+#'
+#' @description Extends \link[dygraphs]{dyShading} to allow multiple areas to be ploted at once.
+#'
+#' @param dygraph Dygraph to add shading to.
+#' @param from Date/time or numeric vector to shade from (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
+#' @param to Date/time or numeric vector to shade to (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
+#' @param color Color of shading. This can be of the form "#AABBCC" or "rgb(255,100,200)" or "yellow". Defaults to a very light gray.
+#' @param axis Axis to apply shading. Choices are "x" or "y".
+#'
+#' @import dygraphs
+#' @note See the
+#'   \href{https://rstudio.github.io/dygraphs/gallery-annotations.html}{online
+#'   documentation} for additional details and examples.
+#' @return A dygraph with the specified shading
+#' @export
+dyShadings <- function(dygraph, from, to, color = "#EFEFEF", axis = "x"){
+  if(length(from) != length(to))
+    stop(paste0("'from' and 'to' have to be of the same length!
+                \n length(from) = ",length(from), ", length(to) = ", length(to)))
+  if(length(from) < 1) stop("'from' and 'to' must be at least of length 1!")
+
+  for(ii in 1:length(from)){
+    dygraph <- dygraph %>%
+      dyShading(from = from[ii], to = to[ii],
+                color = color, axis = axis)
+  }
+  dygraph
 }
 
 ##----------------------------------------------------------------------------##
@@ -116,7 +152,7 @@ LagCorrPlot <- function(lag.df, title = "Mean lag time of the column stations to
                            limits = c(-24,24),
                            labels = c("<24",-12,-6,-3, -1.5, 0, 1.5, 3,6,12,">24"),
                            values = c(0,0.4,0.45,0.47,0.49,0.5,0.51,0.53,0.55,0.6,1),
-                           oob = squish)+
+                           oob = scales::squish)+
       scale_x_continuous(expand = expand_scale(add=0.5),
                          breaks = 1:nrow(ccf.all.mean),
                          minor_breaks = NULL,
@@ -159,14 +195,14 @@ LagCorrPlot <- function(lag.df, title = "Mean lag time of the column stations to
                            limits = c(-24,24),
                            labels = c("<-24",-12,-6,-3, -1.5, 0, 1.5, 3,6,12,">24"),
                            values = c(0,0.4,0.45,0.47,0.49,0.5,0.51,0.53,0.55,0.6,1),
-                           oob = squish)+
+                           oob = scales::squish)+
       scale_color_gradientn(colors = colorRampPalette(brewer.pal(11,"Spectral"))(11),
                             na.value = "transparent", name = "Lag [h]",
                             breaks = c(-24,-12,-6,-3,-1.5,0, 1.5, 3,6,12,24),
                             limits = c(-24,24),
                             labels = c("< -24",-12,-6,-3, -1.5, 0, 1.5, 3,6,12,">24"),
                             values = c(0,0.4,0.45,0.47,0.49,0.5,0.51,0.53,0.55,0.6,1),
-                            oob = squish)+
+                            oob = scales::squish)+
       scale_x_continuous(expand = expand_scale(add=0.5),
                          breaks = 1:nrow(ccf.all.mean),
                          minor_breaks = NULL,
@@ -188,3 +224,161 @@ LagCorrPlot <- function(lag.df, title = "Mean lag time of the column stations to
   }
   g1
 } #end LagCorrPlot
+
+
+##----------------------------------------------------------------------------##
+# NOTE: Unneccessery! Just use dyEvents
+
+#' Events wrapper for dygraph
+#'
+#' @description Extends \link[dygraphs]{dyEvent} to allow multiple areas to be ploted at once.
+#'
+#' @param dygraph Dygraph to add events to.
+#' @param from Date/time or numeric vector to shade from (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
+#' @param to Date/time or numeric vector to shade to (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
+#' @param color Color of shading. This can be of the form "#AABBCC" or "rgb(255,100,200)" or "yellow". Defaults to a very light gray.
+#' @param axis Axis to apply shading. Choices are "x" or "y".
+#'
+#' @import dygraphs
+#' @note See the
+#'   \href{https://rstudio.github.io/dygraphs/gallery-annotations.html}{online
+#'   documentation} for additional details and examples.
+#' @return A dygraph with the specified events.
+#'
+dyEvents <- function(dygraph, x, label, ...){
+  if(length(x) != length(label) & length(label) != 1)
+    stop(paste0("'label' must be of length 1 or length(x).
+                \n length(x) = ",length(x), ", length(label) = ", length(label)))
+  if(length(label) < 1) stop("'label' must be at least of length 1!")
+
+  for(ii in 1:length(x)){
+    dygraph <- dygraph %>%
+      dyEvent(x = x[ii], label = ifelse(length(label) ==1, label, label[ii]),
+                ...)
+  }
+  dygraph
+}
+
+
+##----------------------------------------------------------------------------##
+#' Save dygraph to file
+#'
+#' @param dygraph dygraph object
+#' @param filename File name to create on disk. Without extension.
+#' @param device Device to use. Supported: "png", "jpg","jpeg", "pdf"
+#' @param width,height image width/height.
+#' @param units character. Units of height and width.
+#' @param dpi integer. Image resolution in DPI.
+#' @param zoom numeric. Functions as zoom in a web browser.
+#'    Higher number increases the labels' size.
+#' @import fs
+#' @export
+#'
+#' @import dygraphs
+#'
+#' @examples
+#' \dontrun{
+#'   ## Save a plot of yearly sunspot data
+#'   x <- xts::as.xts(sunspot.year)
+#'   d1 <- dygraphs::dygraph(x)
+#'   dySave(d1, "sunspots_yearly", device = "jpg", width = 8, height = 6)
+#'   }
+#'
+
+dySave <- function(dygraph, filename, device = "png", width = NA, height = NA,
+                   units = c("in", "cm", "mm"), dpi = 300, zoom = 3.75){
+  # get extension and set it as 'device'
+  ext <- fs::path_ext(filename)
+  if(ext != "") device <- ext
+
+  if(!device %in% c("png", "jpg","jpeg", "pdf", "html")){
+    stop(paste("unsupported driver:", device))
+  }
+
+  # get absolute path without extension
+  ifelse(fs::is_absolute_path(filename),
+         file <- fs::path_ext_remove(filename),
+         file <- fs::path_wd(fs::path_ext_remove(filename)))
+
+  on.exit({if(dir.exists(paste0(file, "_lib/")))  try(fs::dir_delete(paste0(file, "_lib/")))})
+
+
+  htmlwidgets::saveWidget(widget = dygraph,
+                          file = paste0(file, ".html"),
+                          libdir = paste0(fs::path_file(file), "_lib/"),
+                          selfcontained = T)
+
+  if(device != "html"){
+  dim <- plot_dim(dim = c(width,height), scale = 1, units = units)
+  dim_pix <- floor(dim * dpi)
+
+  webshot::webshot(url = paste0(file, ".html"),
+                   file = paste0(file, ".", device),
+                   vwidth = dim_pix[1],
+                   vheight = dim_pix[2],
+                   zoom = zoom)
+  }
+}
+
+
+#' Gets plot dimensions for dySave
+#'
+#' @param dim character vector of width and height.
+#' @param scale numeric. Scaling factor.
+#' @param units character. Units of input dimensions.
+#' @param limitsize logical. if TRUE (default) the size of output image is limited to 50'.
+#'
+#' @return numeric vector of length 2: width, height in inches.
+#'
+plot_dim <- function (dim = c(NA, NA), scale = 1, units = c("in", "cm", "mm"), limitsize = T) {
+  units <- match.arg(units)
+  to_inches <- function(x) x/c(`in` = 1, cm = 2.54, mm = 2.54 *
+                                 10)[units]
+  from_inches <- function(x) x * c(`in` = 1, cm = 2.54, mm = 2.54 *
+                                     10)[units]
+  dim <- to_inches(dim) * scale
+  if (any(is.na(dim))) {
+    default_dim <- c(21.4,10.7)
+    dim[is.na(dim)] <- default_dim[is.na(dim)]
+    dim_f <- prettyNum(from_inches(dim), digits = 3)
+    message("Saving ", dim_f[1], " x ", dim_f[2], " ", units,
+            " image")
+  }
+
+  if (limitsize && any(dim >= 50)) {
+    stop("Dimensions exceed 50 inches (height and width are specified in '",
+         units, "' not pixels). If you're sure you want a plot that big, use ",
+         "`limitsize = FALSE`.", call. = FALSE)
+  }
+
+  dim
+}
+
+#==============================================================================#
+
+#' Extract limits from ggplot
+#'
+#' @param plot ggplot object
+#'
+#' @return matrix with four rows (xmin, xmax, ymin, ymax) and number of columns
+#'   equal to the number of panels (facets)
+#' @export
+#'
+#' @examples
+#'   {# NOT RUN #
+#'   library(ggplot)
+#'   g1 <-
+#'   ggplot(mpg, aes(hwy,cty)) +
+#'     geom_point() +
+#'     facet_wrap(drv~., scales = "free_y")
+#'   gglimits(g1)
+#'   }
+gglimits <- function(plot) {
+  gb = ggplot_build(plot)
+  sapply(gb$layout$panel_params, function(ls){
+    c(xmin = ls$x.range[1],
+      xmax = ls$x.range[2],
+      ymin = ls$y.range[1],
+      ymax = ls$y.range[2])
+  })
+}

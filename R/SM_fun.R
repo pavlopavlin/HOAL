@@ -131,3 +131,4 @@ SMchange <- function(sm, smooth = F, na.pad=F){
   names(dsm) <- paste0("d",names(sm))
   return(dsm)
 }#function
+

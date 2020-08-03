@@ -32,6 +32,12 @@
 #'
 #'
 to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear", "spline"), maxgap = 20L){
+
+  #args cleanup
+  interpolation <- match.arg(interpolation)
+  first = xts::first
+  last = xts::last
+
   if(!is.xts(x) | nrow(x) < 2){
     stop("'x' must be an xts object with minimum 2 observation.")
   }
@@ -125,7 +131,7 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
       # endpoints
       ep <- lubridate::floor_date(zoo::index(x), step)
       # averaging to time stamp
-      x_new <- xts(stats::aggregate(x, ep, FUN = FUN, na.rm = TRUE))
+      x_new <- xts(do.call(stats::aggregate, args = list(x = x, by = ep, FUN = FUN, na.rm = TRUE)))
     }
 
     # time step of 'x' is longer as specified by 'by' - interpolation
@@ -147,7 +153,7 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
     # endpoints
     ep <- lubridate::floor_date(zoo::index(x), step)
     # averaging to time stamp
-    x_new <- xts(aggregate(x, ep, FUN = FUN, na.rm = TRUE))
+    x_new <- xts(do.call(stats::aggregate, args = list(x = x, by = ep, FUN = FUN, na.rm = TRUE)))
   }
 
   names(x_new) <- names(x)
@@ -177,11 +183,11 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
 intersect_date <- function(ts1,ts2){
   if(xts::is.xts(ts1) & xts::is.xts(ts2)){
     lubridate::as_datetime(intersect(index(stats::na.omit(ts1)), index(na.omit(ts2))),
-                tz = xts::tzone(ts1))
+                           tz = xts::tzone(ts1))
 
   }else if(lubridate::is.POSIXct(ts1) & lubridate::is.POSIXct(ts2)){
     lubridate::as_datetime(intersect(stats::na.omit(ts1), stats::na.omit(ts2)),
-                tz = xts::tzone(ts1))
+                           tz = xts::tzone(ts1))
   }else stop("'ts1' and 'ts2' should be a 'xts' object or 'POSIXct vectors'.")
 }
 
@@ -367,7 +373,7 @@ IndexShift <- function(x, shift, units = "secs"){
   }
 
   return (x)
-  }
+}
 
 #------------------------------------------------------------------------------#
 
@@ -384,19 +390,20 @@ IndexShift <- function(x, shift, units = "secs"){
 #'
 make.ind.unique <- function(x, FUN = "mean"){
   if(FUN == "mean"){
-    ind_dupl <- index(x)[which(duplicated(index(x)))]
+    ind_dupl <- unique(index(x)[duplicated(index(x))])
     if(length(ind_dupl)!=0){
-      x_mean <- xts(aggregate(x[ind_dupl], index(x[ind_dupl]), mean,na.rm=T))
-      x <- make.index.unique(x, drop = T, fromLast = F)
+      x_mean <- xts::xts(aggregate(x[ind_dupl], index(x[ind_dupl]), mean,na.rm=T))
+      x <- xts::make.index.unique(x, drop = T, fromLast = F)
+      #browser()
       x[ind_dupl,] <- x_mean[,]
     }
     return(x)
   }
   if(FUN == "first"){
-    return(make.index.unique(x, drop = T, fromLast = F))
+    return(xts::make.index.unique(x, drop = T, fromLast = F))
   }
   if(FUN == "last"){
-    return(make.index.unique(x, drop = T, fromLast = T))
+    return(xts::make.index.unique(x, drop = T, fromLast = T))
   }
 }
 
@@ -424,7 +431,7 @@ make.ind.unique <- function(x, FUN = "mean"){
 #' xtsreg(x.dupl)
 #'
 xtsreg <- function(x,FUN="mean"){
-  by <-  as.numeric(median(diff(index(x))),units="secs")
+  by <-  as.numeric(median(diff(zoo::index(x))),units="secs")
   reg <- xts::xts(order.by = seq(start(x),end(x), by = by))
   x_unique <- HOAL::make.ind.unique(x, FUN = FUN)
   x_new <- xts::merge.xts(x_unique,reg)
@@ -437,11 +444,11 @@ xtsreg <- function(x,FUN="mean"){
 
 #------------------------------------------------------------------------------#
 
-#' Substract series minimum.
+#' Subtract series minimum/maximum
 #'
 #' @param x An xts object.
 #'
-#' @return An xts object.
+#' @return An xts object of same dimensions as input.
 #'
 #' @details Works on each column seperately.
 #'
@@ -452,9 +459,16 @@ xtsreg <- function(x,FUN="mean"){
 #' x <- xts::as.xts(sample_matrix)
 #'
 #' subMin(x)
+#' subMax(x)
 #'
 subMin <-function(x){
-  xts(apply(coredata(x), 2, function(y) round(y - min(y, na.rm = T),4)),
+  xts(apply(coredata(x), 2, function(y) y - min(y, na.rm = T)),
+      order.by = index(x), tz = tzone(x))
+}
+
+#' @describeIn subMin Subtract series maximum from the series
+subMax <-function(x){
+  xts(apply(coredata(x), 2, function(y) y - max(y, na.rm = T)),
       order.by = index(x), tz = tzone(x))
 }
 
@@ -527,6 +541,8 @@ rowMeans.xts <- function(x, na.rm = T){
 #' @param span Optional. the smoother span. This gives the proportion of points
 #' in the plot which influence the smooth at each value.
 #' Larger values give more smoothness.
+#' @param max.span optional numeric. Maximum allowed span. Used to prevet from over smoothing.
+#' @param degree the degree of the local polynomials to be used. It can ben 0, 1 or 2.
 #' @param ... Additional parameters to \link[fANCOVA]{loess.as}.
 #'
 #' @details If \code{span} is not given, \code{stats:optim} is used to determine,
@@ -555,7 +571,6 @@ rowMeans.xts <- function(x, na.rm = T){
 #' x2.smth <- loess.xts(x2, criterion = "gcv", degree = 2, plot = T )
 #'}
 #' @export
-#' @importFrom fANCOVA loess.as
 loess.xts <- function(x, span, max.span, degree = 2, ...){
   if(!xts::is.xts(x)) stop("'x' must be an xts object.")
   if(nrow(x) < 10 | length(which(!is.na(x))) < 10) stop("'x' is too short.")
@@ -569,12 +584,12 @@ loess.xts <- function(x, span, max.span, degree = 2, ...){
                     ", at", xts::first(index(x)),". NA returned."))
       x_new <- merge.xts(x_new, NA)
     }else{
-      temp <- loess.as(index(x[ ,ii]), x[ ,ii],
+      temp <- fANCOVA::loess.as(index(x[ ,ii]), x[ ,ii],
                                 user.span = span, degree = degree, ...)
       if(!missing(max.span)){
         if(temp$par$span > max.span & is.null(span)){
           temp <- loess.as(index(x[ ,ii]), x[ ,ii],
-                                    user.span = max.span, degree = degree, ...)
+                           user.span = max.span, degree = degree, ...)
           warning("Calculated span > max.span. Recalculating with 'max.span'.")
         }
       }
@@ -593,7 +608,9 @@ loess.xts <- function(x, span, max.span, degree = 2, ...){
 #' Modifies provided subset period (e.g. "2017-01-15/2018-03-20") by extending or
 #' shrinking it by 'by' number of seconds.
 #'
-#' @param period A character subseting period (see \link[xts]{.parseISO8601}).
+#' @param period A character subseting period (see
+#'   href{https://cran.r-project.org/web/packages/xts/xts.pdf#Rfn..parseISO8601.1}
+#'   {xts::.parseISO8601}).
 #' @param by A numeric value. Number of seconds to add or subtract from
 #'   \code{period}. If \code{by} is a vector with length 2, first value is applied
 #'   to left side and second value to the right side of \code{period}.
@@ -645,6 +662,7 @@ expandPeriod <- function(period, by){
 #'
 #' @param x univariate xts object.
 #' @inheritParams stlplus::stlplus
+#' @param ... additional parameters
 #'
 #' @inherit stlplus::stlplus details
 #' @return An xts object containing columns:
@@ -657,6 +675,8 @@ expandPeriod <- function(period, by){
 #' @export
 #'
 #' @importFrom stlplus stlplus
+#'
+#' @seealso stlplus::stlplus
 #'
 #' @examples
 #' \dontrun{
@@ -824,9 +844,238 @@ plot.decompose.xts <- function(x, type = c("zoo", "dygraph"),
 #' @return detrended xts object.
 #'
 #'
-detrend.xts <- function(x,...){
-  x1 <- decompose.xts(x,...)
+detrend.xts <- function(x, type = c("additive", "multiplicative"), units = "days", plot = T){
+  x1 <- decompose.xts(x, type = type, units, plot)
   return(x1[,1]-x1[,2])
 }
 
+#==============================================================================#
+# Date of min, max ##
+#' Date of minimum/maximum
+#'
+#' Returns the date of the minimum/maximum in the provided 'xts' object 'x'.
+#'
+#' @param x (multivariate) xts object.
+#'
+#' @return vector of minima/maxima dates (POSIXct) with the length of \code{ncol(x)}
+#'
+#' @export
+#' @examples
+#' data(GWL)
+#'
+#' #univariate xts
+#' date.min(GWL["2017","BP01"])
+#'
+#' # multivariate xts
+#' date.max(GWL["2017",])
+#'
+date.min <- function(x){
+  d <- c()
+  for(i in 1:ncol(x)){
+    x1 <- x[!is.na(x[,i]),i]
+    d <- append(d, index(x1[which.min(x1)]))
+  }
 
+  return(d)
+}
+
+#' @describeIn date.min Returns the date of the maxima.
+#' @export
+date.max <- function(x){
+  #date.max finds the date of the minimum in the provided 'xts' object 'x'
+
+  #INPUTS:
+  # 'x' xts object (could be multivariate)
+
+  #Value:
+  # vector of minima dates with the length of ncol(x)
+
+  d <- c()
+  for(i in 1:ncol(x)){
+    x1 <- x[!is.na(x[,i]),i]
+    d <- append(d, index(x1[which.max(x1)]))
+  }
+
+  return(d)
+}
+
+#==============================================================================#
+#' Rollmean
+#'
+#' Calculates rolling mean allowing NAs in the data.
+#'
+#' @param x (multivariate) xts object.
+#' @param k numeric. window size.
+#' @inheritParams stats::filter
+#' @param shrink logical. Should the leading and trailing NAs be removed?
+#'
+#' @return xts of dimensions as \code{x} if \code{shrink == F}, and of
+#'   \code{nrow(x) - (k-1) x ncol(x)} if \code{shrink == T}.
+#' @export
+#' @seealso stats::filter
+#' @examples
+#' data(GWL)
+#' x <- rollmean2(GWL["2017",], k = 7)
+#'
+rollmean2 <-
+  function(x,
+           k = 3,
+           sides = 2,
+           method = "convolution",
+           shrink = F) {
+    #rollmean2 calculates rolling mean of timeseries with NAs
+    if (sides == 2 &
+        k %% 2 == 0)
+      warning("if sides = 2, 'k' should be odd!")
+    if (shrink == F) {
+      return(as.xts(apply(x, 2, function(z)
+        stats::filter(z, rep(1 / k, k), sides = sides, method = "convolution")),
+        order.by = index(x)))
+    }
+    if (shrink == T) {
+      return(as.xts(apply(x, 2, function(z)
+        stats::filter(z, rep(1 / k, k), sides = sides, method = "convolution")),
+        order.by = index(x))[ceiling((k - 1) / 2 + 1):(nrow(x) -
+                                                         floor((k - 1) / 2)), ])
+    }
+  }
+
+#==============================================================================#
+# Data normalization ####
+
+#' normalize data.frame to the interval [0,1]
+#'
+#' @param x data.frame of numeric data.
+#'
+#' @return data.frame
+#' @export
+#'
+#' @examples
+#' data(GWL)
+#' df <- fortify.zoo(GWL["2017",c(1:3)])
+#' dfNorm(df)
+dfNorm <- function(x){
+  as.data.frame(lapply(x, function(y) {(y - min(y, na.rm=TRUE))/(max(y,na.rm=TRUE) -
+                                                                   min(y, na.rm=TRUE))}))
+}
+
+# 'stdx' function from hydroTSM
+#' Normalize xts to the [0,1]
+#'
+#' Applies \link[hydroTSM]{stdx} to all columns of the xts provided.
+#'
+#' @param x xts object
+#'
+#' @return xts object
+#' @export
+#'
+#' @examples
+#' data(GWL)
+#' stdxts(GWL["2017-01-01",c("BP01", "BP02")])
+#'
+stdxts <- function(x){
+  return(xts(apply(x, 2, hydroTSM::stdx), order.by = index(x)))
+}
+
+# ## subtract min or mean value of the time-series
+#
+# XtsChange <- function(x, FUN = min){
+#   xts(vapply(x, function(col) col - FUN(col, na.rm = T),
+#              FUN.VALUE = numeric(nrow(x))),
+#       order.by = index(x))
+# }
+
+##============================================================================##
+#' rbind at specific time
+#'
+#' @param x,y (multivariate) xts objects.
+#' @param at datetime value or vector coercable to POSIXct when binding should a occur.
+#'
+#' @return xts object with values from \code{x} on time interval
+#'   \code{[start(x),at) and values from y on time interval [at,end(y)]}.
+#' @export
+#'
+#' @examples
+#' data(GWL)
+#' x <- GWL["2017-01/2017-06",1]
+#' y <- GWL["2017-03/2017-08",1]
+#' rbind_at(x,y, at="2017-04-23")
+rbind_at <- function(x,y, at){
+  #check number of variables in 'x' and 'y'
+  if (ncol(x)!=ncol(y)){
+    stop("'x' and 'y' must have same number of columns!")
+  }
+
+  #check 'at'
+  if (!(length(at) == 1 || length(at) == ncol(x))){
+    stop("'at' should be of length 1 or ncol(x)!")
+  }
+
+  #make sure 'at' is a POSIXct object
+  at = as.POSIXct(at, tz="Etc/GMT-1")
+  if (length(at) == 1){
+    at = rep(at,ncol(x))
+  }
+  #create empty xts object
+  by = as.numeric(median(diff(index(x))), "secs")
+  xy <- xts(order.by = seq(start(x),end(y), by = by))
+
+  for (i in 1:ncol(x)){
+    temp <- rbind(x[paste0("/",at[i]-by),i],y[paste0(at[i],"/"),i])
+    xy <- merge(xy,temp)
+  }
+  names(xy)<-names(x)
+  return(xy)
+}
+
+##============================================================================##
+#' Mean monthly values
+#'
+#' @description Calculates average value for each month (e.g. mean of all Aprils in dataset).
+#'
+#' @param data (multivariate) xts object.
+#' @param plot logical. Should the plot be shown.
+#'
+#' @return A data.frame of dimensions  \code{12 x ncol(data)}.
+#' @export
+#'
+#' @examples
+#' data(GWL)
+#' MonMean(GWL)
+MonMean <- function(data, plot = F){
+  # change timestep to monthly if not already
+  data <- to_timestep(data, "month")
+
+  #array of logical values of size nrow(data)x12
+  #each column indicates which rows in data corespond to certain month
+  y <- mapply(function(x){.indexmon(data) == x}, 0:11)
+
+  # calculates mean for each month for each variable
+  monmean <- apply(data,2, function(x){apply(y,2,function(a){mean(x[a],na.rm=T)})})
+  months <- c("Jan", "Feb", "Mar", "Apr","May", "Jun",
+              "Jul", "Aug", "Sep","Oct","Nov","Dec")
+  rownames(monmean)<- months
+  if(plot){
+    x11()
+    par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+    matplot(monmean,type = c("b"),pch=1, main="Monthly average",
+            xlab = "Month", ylab = "Monthly average", col = 1:ncol(monmean),
+            lwd = 1.5, lty = 1:ncol(monmean))
+    legend("right", colnames(monmean), inset=c(-0.25,0), pch = 1,
+           lty = 1:ncol(monmean), col = 1:ncol(monmean),bty='n',
+           xpd = T, title = "Stations")
+
+    # normalized graph
+    x11()
+    par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
+    nmonmean <- apply(monmean, 2, function(x){(x-min(x,na.rm=T))/(max(x,na.rm=T)-min(x, na.rm=T))})
+    matplot(nmonmean, type = c("b"),pch=1, col = 1:ncol(monmean),
+            xlab = "Month", ylab = "Normalized Monthly average",
+            lwd = 1.5, lty = 1:ncol(monmean), main="Normalized Monthly average")
+    legend("right", colnames(monmean), inset=c(-0.25,0), pch = 1,
+           lty = 1:ncol(monmean), col = 1:ncol(monmean),bty='n',
+           xpd = T, title = "Stations")
+  }#END IF
+
+  return(data.frame(monmean))
+}

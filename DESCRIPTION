@@ -12,26 +12,27 @@ Description:
     of PhD dealing with ground water in Hidrological Open-Air Laboratory (HOAL).
 Depends:
     xts,
-    R (>= 3.0)
-Imports:
     zoo,
     lubridate,
-    hydroTSM,
+    ggplot2,
+    dygraphs,
+    dplyr,
     data.table,
+    R (>= 3.0)
+Imports:
+    hydroTSM,
     readxl,
     rgdal,
     sp,
-    dygraphs,
     fANCOVA,
     pracma,
     htmltools,
     scales,
     stlplus,
-    RColorBrewer,
-    ggplot2
+    RColorBrewer
 Suggests:
     HOALdata
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0

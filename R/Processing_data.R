@@ -149,7 +149,7 @@ ManualMeasurments <- function(st = NA,FTP = FALSE){
 #' @param st optional character vector of a GW station names.
 #' @param man.meas.file character. Full path to the Excel file with manual
 #' measurements at GW stations
-#' @param  driver.data.path character. Path to the directory of raw diver data
+#' @param  diver.data.path character. Path to the directory of raw diver data
 #' (MON files).
 #'
 #' @return Tibble with three columns:
@@ -211,9 +211,19 @@ DiverEvents <- function(st,
 
 #------------------------------------------------------------------------------#
 
+#' Piezometer installation information
+#'
+#' @description installation information of all piezometers currently in use in the HOAL
+#'   (ID,  East_GK_East, North_GK_East, Elevation,  Elevation_old, h_pipe)
+#'
+#' @param st optional. One or more station names to be included in the output.
+#'    If NULL (default), all available data will be exported.
+#'
+#' @return
+#' @export
+#'
 PiezoInstall <- function(st = NULL){
-  # installation information of all piezometers currently in use in the HOAL
-  # ID  East_GK_East North_GK_East Elevation  Elevation_old h_pipe
+
 
   #return(read.csv("D:/PhD/HOAL/raw_data/piezometer/piezo_coordinates.csv", sep = ",", dec = "."))
   df <- readxl::read_xlsx("D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx",
@@ -243,6 +253,11 @@ PiezoInstall <- function(st = NULL){
 
 #------------------------------------------------------------------------------#
 
+#' Save piezometer installation information to SHP
+#'
+#' @export
+#' @param file character path where SHP should be saved (without ".shp")
+#'
 PiezoInstallGIS <- function(file = "D:/PhD/HOAL/GIS/piezometers/GW_stations"){
   #'piezo_install_GIS" writes piezometer installation information as shp file
 
@@ -264,12 +279,14 @@ PiezoInstallGIS <- function(file = "D:/PhD/HOAL/GIS/piezometers/GW_stations"){
 
 #------------------------------------------------------------------------------#
 
+#' Euclidean distance between stations
+#'
+#' @param piezo.install data.frame given by the \code{piezo_install}
+#' @param filename character filepath to save data to. Not saved if NULL.
+#'
+#' @return data.frame
+#' @export
 PiezoDist <- function(piezo.install, filename = NULL){
-  #'piezo_dist' calculates distances between given points
-
-  #INPUT:
-  #'piezo_install' data.frame given by the piezo_install function
-  #'filename' data.frame is writen to file given by 'filename'. If NULL nothing is written.
   piezo.dist <- data.frame()
   for(i in 1:nrow(piezo.install)){
     for(j in 1:nrow(piezo.install)){
@@ -291,14 +308,20 @@ PiezoDist <- function(piezo.install, filename = NULL){
 
 #------------------------------------------------------------------------------#
 
+#' Diver elevation
+#'
+#' Function that calculates absolute diver hight from manual measurements
+#'
+#' @param manual data frame of manual measurements for station
+#' @param diver xts object with pressure data from diver
+#' @param baro xts object with pressure data from barometric sensor
+#' @param g_elev numeric. ground elevation at station.
+#' @param h_pipe numeric. hight of piezometer pipe above ground surface.
+#'
+#' @return data.frame
+#' @export
+#'
 DiverElev <- function(manual, diver, baro, g_elev, h_pipe){
-  # function that calculates absolute diver hight from manual measurements
-
-  # manual ...data frame of manual measurements for station
-  # diver  ...time series object with pressure data from diver
-  # baro   ...time series object with pressure data from barometric sensor
-  # g_elev ...ground elevation at station
-  # h_pipe ...hight of piezometer pipe above ground surface
 
   # create xts object from manual measurements data
   df <- xts::xts(manual[3]/100, order.by = manual[[2]], tz = "Etc/GMT-1")
@@ -307,7 +330,7 @@ DiverElev <- function(manual, diver, baro, g_elev, h_pipe){
   df$diver <- na.locf(diver, xout = index(df), maxgap = maxgap)
   if(any(is.na(df$diver))){
     df$diver[is.na(df$diver), ] <- sapply(index(df[is.na(df$diver), ]),
-                                          function(x){value <- na.omit(head(diver[index(diver) >= x],maxgap))
+                                          function(x){value <- stats::na.omit(head(diver[index(diver) >= x],maxgap))
                                           ifelse(length(value)>0,value[1],NA)})
   }
   df$baro  <- na.approx(baro , xout = index(df))
@@ -331,6 +354,19 @@ DiverElev <- function(manual, diver, baro, g_elev, h_pipe){
 
 #------------------------------------------------------------------------------#
 
+#' Diver elevation list
+#'
+#' Saves diver elevation table to Excel
+#'
+#' @param Stations character vector. GW stations to use.
+#' @param start Coercable to POSIXct. Start of investigation period.
+#' @param end Coercable to POSIXct. End of investigation period.
+#' @param filepath character path where Excel file should be saved.
+#' @param man.measure data.frame of manual measurements. By default read by \link{ManualMeasurments}.
+#' @param st.install data.frame of station installation data. By default read by \link{PiezoInstall}.
+#'
+#' @export
+#'
 DiverElevList <- function(Stations, start, end, filepath = NULL,
                           man.measure = ManualMeasurments(),
                           st.install = PiezoInstall()){
@@ -397,8 +433,10 @@ DiverElevList <- function(Stations, start, end, filepath = NULL,
 #'   "median" - median from all available manual measurements
 #'   "one" - one elevation value for the whole period
 #'
-#' @return None. Excel file.
 #' @export
+#' @return None. Excel file.
+#'
+#'
 DiverElevTable <- function(diver.elev.list, filepath, start, end, type = c("all","median","one")){
   Stations <- names(diver.elev.list)
 
