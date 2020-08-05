@@ -11,21 +11,21 @@ Description:
     This is a package of utility and plotting functions developed for the needs 
     of PhD dealing with ground water in Hidrological Open-Air Laboratory (HOAL).
 Depends:
-    R (>= 3.0)
-Imports:
+    R (>= 3.0),
     xts,
-    zoo,
     lubridate,
     ggplot2,
     dygraphs,
     dplyr,
-    data.table,
     hydroTSM,
+    magrittr
+Imports:
+    zoo,
+    data.table,
     readxl,
     rgdal,
     sp,
-    stringr,
-    magrittr
+    stringr
 Suggests:
     fANCOVA,
     pracma,
@@ -33,7 +33,7 @@ Suggests:
     scales,
     stlplus,
     RColorBrewer,
-    HOALdata
+    HOAL.data
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
