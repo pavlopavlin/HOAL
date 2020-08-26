@@ -105,15 +105,16 @@ BaroComp <- function(diver, baro, dry = F, maxdiff = 50){
 #' station name.
 #' @param FTP logical. Should the latest Excel file be fetched from FTP server.
 #' Not yet implemented.
+#' @param man.meas.file filename of manual measurements data
 #'
 #' @return A tibble with columns \code{Station}, \code{Date},
 #' \code{h} and \code{Comment}.
 #'
 #' @export
 #'
-ManualMeasurments <- function(st = NA,FTP = FALSE){
+ManualMeasurments <- function(st = NA, FTP = FALSE, man.meas.file =  "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
   # Local files
-  file <- "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"
+  file <- man.meas.file
 
   # all piezometers
   df <- data.frame(read_excel(file, sheet = "Manual_measurements",
@@ -222,11 +223,11 @@ DiverEvents <- function(st,
 #' @return
 #' @export
 #'
-PiezoInstall <- function(st = NULL){
+PiezoInstall <- function(st = NULL, man.meas.file = "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
 
 
   #return(read.csv("D:/PhD/HOAL/raw_data/piezometer/piezo_coordinates.csv", sep = ",", dec = "."))
-  df <- readxl::read_xlsx("D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx",
+  df <- readxl::read_xlsx(man.meas.file,
                   sheet = "Installation_overview", skip = 3,
                   na = c("x","?","-","X","NA"),
                   col_names = c("Station", "X","Y", "Z", "PipeHeight","TotalDepth",
