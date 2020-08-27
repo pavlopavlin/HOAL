@@ -23,13 +23,15 @@
 #' @export
 #'
 #' @examples
-#' data(sample_matrix, package = "xts")
-#' x <- xts::as.xts(sample_matrix)
+#' \dontrun{
+#' # sample data
+#' data(sample_xts)
 #' # Aggregation to monthly means
-#' x.monthly <- to_timestep(x, by = "months")
-#' # Interpolation to 12 hours values
-#' x.hourly <- to_timestep(x, by = "12 hours")
+#' x.monthly <- to_timestep(sample_xts, by = "months")
 #'
+#' # Interpolation to 12 hours values
+#' x.hourly <- to_timestep(sample_xts, by = "12 hours")
+#' }
 #'
 to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear", "spline"), maxgap = 20L){
 
@@ -172,14 +174,14 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # sample data
+#' data(sample_xts)
 #'
-#' data(sample_matrix, package = "xts")
-#' x <- xts::as.xts(sample_matrix)
-#'
-#' x1 <- x["/2007-04", ]
-#' x2 <- x["2007-03/", ]
+#' x1 <- sample_xts["/2007-04", ]
+#' x2 <- sample_xts["2007-03/", ]
 #' intersect_date(x1, x2)
-#'
+#' }
 intersect_date <- function(ts1,ts2){
   if(xts::is.xts(ts1) & xts::is.xts(ts2)){
     lubridate::as_datetime(intersect(index(stats::na.omit(ts1)), index(na.omit(ts2))),
@@ -342,11 +344,12 @@ ccfxts <- function(x,y = NULL, type = c("correlation", "covariance"),
 #' @export
 #'
 #' @examples
-#'
+#' \dontrun{
 #' data(sample_matrix, package = "xts")
 #' x <- xts::as.xts(sample_matrix)
 #'
 #' IndexShift(x, 2, "days")
+#' }
 IndexShift <- function(x, shift, units = "secs"){
 
   if (is.xts(x) == F) stop("'x' is not an xts object.")
@@ -422,6 +425,7 @@ make.ind.unique <- function(x, FUN = "mean"){
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' data(sample_matrix, package = "xts")
 #' x <- xts::as.xts(sample_matrix)[1:20, ]
 #' x.mis <- x[c(-2,-5,-7,-15,-16,-18),]
@@ -429,7 +433,7 @@ make.ind.unique <- function(x, FUN = "mean"){
 #'
 #' x.dupl <-x[c(1,2,3,3,4:20),]
 #' xtsreg(x.dupl)
-#'
+#' }
 xtsreg <- function(x,FUN="mean"){
   by <-  as.numeric(median(diff(zoo::index(x))),units="secs")
   reg <- xts::xts(order.by = seq(start(x),end(x), by = by))
@@ -455,12 +459,13 @@ xtsreg <- function(x,FUN="mean"){
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' data(sample_matrix, package = "xts")
 #' x <- xts::as.xts(sample_matrix)
 #'
 #' subMin(x)
 #' subMax(x)
-#'
+#' }
 subMin <-function(x){
   xts(apply(coredata(x), 2, function(y) y - min(y, na.rm = T)),
       order.by = index(x), tz = tzone(x))
@@ -519,11 +524,12 @@ emptyxts <- function(start,end, by, dim = 1, tz = "Etc/GMT-1"){
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' data(sample_matrix, package = "xts")
 #' x <- xts::as.xts(sample_matrix)
 #'
 #' rowMeans.xts(x)
-#'
+#' }
 rowMeans.xts <- function(x, na.rm = T){
   x_new <- xts::xts(rowMeans(x,na.rm = na.rm),
                     order.by = index(x),
@@ -680,10 +686,9 @@ expandPeriod <- function(period, by){
 #'
 #' @examples
 #' \dontrun{
-#' data(sample_matrix, package = "xts")
-#' x <- xts::as.xts(sample_matrix)[,1]
+#' data(sample_xts)
 #'
-#' stlplus.xts(x, n.p = 10, s.window = 100)
+#' stlplus.xts(sample_xts, n.p = 10, s.window = 100)
 #' }
 #'
 stlplus.xts <- function(x, n.p, s.window, s.degree = 1, t.window = NULL,
@@ -861,14 +866,15 @@ detrend.xts <- function(x, type = c("additive", "multiplicative"), units = "days
 #'
 #' @export
 #' @examples
-#' data(GWL)
+#' \dontrun{
+#' x <- data(sample_matrix, package = "xts")
 #'
 #' #univariate xts
-#' date.min(GWL["2017","BP01"])
+#' date.min(x[,1])
 #'
 #' # multivariate xts
-#' date.max(GWL["2017",])
-#'
+#' date.max(x[,])
+#' }
 date.min <- function(x){
   d <- c()
   for(i in 1:ncol(x)){
@@ -914,9 +920,10 @@ date.max <- function(x){
 #' @export
 #' @seealso stats::filter
 #' @examples
-#' data(GWL)
-#' x <- rollmean2(GWL["2017",], k = 7)
-#'
+#' \dontrun{
+#' data(sample_matrix, package = "xts")
+#' x <- rollmean2(sample_matrix["2017",], k = 7)
+#' }
 rollmean2 <-
   function(x,
            k = 3,
@@ -951,9 +958,11 @@ rollmean2 <-
 #' @export
 #'
 #' @examples
-#' data(GWL)
-#' df <- fortify.zoo(GWL["2017",c(1:3)])
+#' \dontrun{
+#' data(sample_xts)
+#' df <- fortify.zoo(sample_xts["2017",c(1:3)])
 #' dfNorm(df)
+#' }
 dfNorm <- function(x){
   as.data.frame(lapply(x, function(y) {(y - min(y, na.rm=TRUE))/(max(y,na.rm=TRUE) -
                                                                    min(y, na.rm=TRUE))}))
@@ -970,9 +979,10 @@ dfNorm <- function(x){
 #' @export
 #'
 #' @examples
-#' data(GWL)
-#' stdxts(GWL["2017-01-01",c("BP01", "BP02")])
-#'
+#' \dontrun{
+#' data(sample_xts)
+#' stdxts(sample_xts["2017-01-01",1:2])
+#' }
 stdxts <- function(x){
   return(xts(apply(x, 2, hydroTSM::stdx), order.by = index(x)))
 }
@@ -996,10 +1006,12 @@ stdxts <- function(x){
 #' @export
 #'
 #' @examples
-#' data(GWL)
-#' x <- GWL["2017-01/2017-06",1]
-#' y <- GWL["2017-03/2017-08",1]
+#' \dontrun{
+#' data(sample_xts)
+#' x <- sample_xts["2017-01/2017-06",1]
+#' y <- sample_xts["2017-03/2017-08",1]
 #' rbind_at(x,y, at="2017-04-23")
+#' }
 rbind_at <- function(x,y, at){
   #check number of variables in 'x' and 'y'
   if (ncol(x)!=ncol(y)){
@@ -1040,8 +1052,10 @@ rbind_at <- function(x,y, at){
 #' @export
 #'
 #' @examples
-#' data(GWL)
-#' MonMean(GWL)
+#' \dontrun{
+#' data(sample_xts)
+#' MonMean(sample_xts)
+#' }
 MonMean <- function(data, plot = F){
   # change timestep to monthly if not already
   data <- to_timestep(data, "month")

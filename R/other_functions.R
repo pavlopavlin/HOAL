@@ -60,8 +60,10 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
 #' @export
 #'
 #' @examples
+#' {
 #' a <- c(1:10,3:15,6:2)
 #' mode(a)
+#' }
 getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
@@ -601,9 +603,10 @@ dryPer <- function(prec,t, mindrytime=1, sigprec,plot=T){
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #'   TextureCalc(40, 20, 40)
 #'   TextureCalc(c(10,40,50))
-#'
+#' }
 TextureCalc <- function(clay,silt =NULL,sand=NULL){
   if(missing(silt) & missing(sand)){
     silt <- clay[2]

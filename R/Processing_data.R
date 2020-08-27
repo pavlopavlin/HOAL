@@ -102,17 +102,20 @@ BaroComp <- function(diver, baro, dry = F, maxdiff = 50){
 #' Reads manual measurements from Excel
 #'
 #' @param st Optional character vector. If not \code{NA}, it should be a GW
-#' station name.
+#'    station name.
 #' @param FTP logical. Should the latest Excel file be fetched from FTP server.
-#' Not yet implemented.
-#' @param man.meas.file filename of manual measurements data
+#'    Not yet implemented.
+#' @param man.meas.file character. Full path to the Excel file with manual
+#'    measurements at GW stations
 #'
 #' @return A tibble with columns \code{Station}, \code{Date},
 #' \code{h} and \code{Comment}.
 #'
 #' @export
 #'
-ManualMeasurments <- function(st = NA, FTP = FALSE, man.meas.file =  "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
+ManualMeasurments <- function(st = NA,
+                              FTP = FALSE,
+                              man.meas.file =  "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
   # Local files
   file <- man.meas.file
 
@@ -219,14 +222,15 @@ DiverEvents <- function(st,
 #'
 #' @param st optional. One or more station names to be included in the output.
 #'    If NULL (default), all available data will be exported.
+#' @param man.meas.file character. Full path to the Excel file with manual
+#'    measurements at GW stations
 #'
 #' @return
 #' @export
 #'
-PiezoInstall <- function(st = NULL, man.meas.file = "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
+PiezoInstall <- function(st = NULL,
+                         man.meas.file = "D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx"){
 
-
-  #return(read.csv("D:/PhD/HOAL/raw_data/piezometer/piezo_coordinates.csv", sep = ",", dec = "."))
   df <- readxl::read_xlsx(man.meas.file,
                   sheet = "Installation_overview", skip = 3,
                   na = c("x","?","-","X","NA"),
@@ -234,18 +238,6 @@ PiezoInstall <- function(st = NULL, man.meas.file = "D:/PhD/HOAL/raw_data/piezom
                                 "ScreenSt", "ScreenEnd", "CurrentDiver", "DiverType",
                                 "PipeColor","Status", "InstallationDate","Group","Comments"))
 
-  # df <- read.xlsx2("D:/PhD/HOAL/raw_data/piezometer/GWstations.xlsx",
-  #                  sheetIndex = "Installation_overview", startRow = 3,
-  #                  stringsAsFactors = F, as.data.frame = T,
-  #                 colClasses = c("character", rep("numeric",7),rep("character",3),
-  #                                "numeric","Date","character", "character"))
-  # colnames(df) <- c("Station", "X","Y", "Z", "PipeHeight","TotalDepth",
-  #                   "ScreenSt", "ScreenEnd", "CurrentDiver", "DiverType",
-  #                   "PipeColor","Status", "InstallationDate","Group","Comments")
-  #
-  # for(ii in 1:ncol(df)){df[df[ii] %in% c("x","?","-","X","NA"),ii] <- NA}
-  # df <- data.frame(apply(df,1:2,function(x) if( x %in% c("x","?","-","X","NA")) return(NA) else return(x)))
-  #
 
   if(!is.null(st)) df <- subset(df, Station == st)
 
@@ -617,22 +609,9 @@ spike.rm <- function(x, d, k = 30,t0 = 7){
 
   ## spikes in the middle of time series
   # Median absolute deviation (MAD) outlier in Time Series
-  ha <- hampel(x.na.rm[,1],k, t0 = t0)
+  ha <- pracma::hampel(x.na.rm[,1],k, t0 = t0)
   x[zoo::index(ha$y),1] <- ha$y
   ind <- which(zoo::index(x) %in% zoo::index(ha$y[ha$ind]))
-
-  ## Depratiated =====#
-  # # index offset
-  # p <- (k+1)%/%2 -1
-  # # indices of spike values
-  # ind <- which(abs(x[,1] - rollmean(x[,1], k)) > d) + p
-  # # replace spikes with NA
-  # x[ind,1] <- NA
-  # # linear interpolation of missing values
-  # for (i in ind){
-  #   x[i,1]<- na.approx(x[(i-k):(i+k),1], maxgap = k, na.rm = F)[index(x[i])]
-  # }# END for
-  ## END Depratiated =====#
 
   ## spikes on the edges of time series
   # series length
