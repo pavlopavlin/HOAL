@@ -51,7 +51,6 @@ MONread <- function(filename, tzone = "Etc/GMT-1"){
 #' @return An \code{xts} object with same number of columns as \code{mon}.
 #'
 #' @export
-#'
 MONcheck <- function(mon){
 
   # check periodicity of the xts object. Produces a list object
@@ -171,7 +170,7 @@ MONagg <- function(mon1, mon2, FUN = mean){
 #'
 #' @examples
 #' \dontrun{
-#'  MONimport(path = "GWdata", keywords = "H01",
+#'  MONfiles(path = "GWdata", keywords = "H01",
 #'            start = "2017-01-01", end = "2018-01-01")
 #' }
 #'

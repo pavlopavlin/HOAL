@@ -14,9 +14,10 @@
 #' @return A data.frame with one row for each station pair (long format).
 #' @note Use of this function is not recommended!
 #' @examples
-#' data(GWL)
-#' x <- GWL["2018-02-20/2018-02-28",c("BP01","BP02","H04","H06")]
-#' lag_times(x, max.lag = 3)
+#' \dontrun{
+#' data(sample_xts)
+#' lag_times(sample_xts, max.lag = 3)
+#' }
 lag_times <- function(data,max.lag=1){
   data <- rollmean2(data,k=9)
   data_diff <- diff.xts(data) # differentiented timeseries
@@ -52,6 +53,9 @@ lag_times <- function(data,max.lag=1){
 #' @param Q discharge data for an event, data.frame or xts.
 #' @param C concentration or other dependant data for the same event as 'code{Q}.
 #' @param sections numeric value of data partitioning size in percent.
+#' @param Q.min numeric [0,1]. fraction of lowest \code{Q} values to exclude
+#'   from the calculation. Defaults to 0.15.
+#' @param plt logical. Plot results?
 #'
 #' @return A data.frame with HI values for each section
 #' @export
@@ -185,10 +189,23 @@ HI <- function(Q, C, sections = 5, Q.min = 15, plt = F){
 #' Returns NA if change of C is less or equal to min.dC
 #' (only if \code{shape.check == T})
 #'
-#' @examples\dontrun{
+#' @examples
+#' \dontrun{
+#' data(sample_xts)
+#'
+#' # two xts objects
+#' Q <- sample_xts[,1]
+#' C <- sample_xts[,2]
 #' HystArea2(Q,C)
+#'
+#' # two data.frames
+#' Q <- data.frame(Index = xts::index(sample_xts), sample_xts[,1])
+#' C <- data.frame(Index = xts::index(sample_xts), sample_xts[,2])
 #' HystArea2(Q, C, min.Q = 0.1)
-#' HystArea2(Q, C, min.Q = 0.1, shape.check = T)
+#'
+#' # one xts object
+#' Q <-sample_xts[,1:2]
+#' HystArea2(Q, min.Q = 0.1, shape.check = T)
 #' }
 #'
 #' @export
@@ -480,12 +497,13 @@ HystArea3 <- function(x, y = NULL, tstep = 300){
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' stat1 <- c(0.7, 0.5, -0.2, 0.7, -2.5)
 #' RespClassification(stats = stat1)
 #'
 #' stat.df <- as.data.frame(rbind(stat1, stat1 + 0.1))
 #' RespClassification(stats = stat.df)
-#'
+#' }
 RespClassification <- function(stats){
   if(!is.vector(stats)){
     return(apply(stats, 1, FUN = RespClassification))

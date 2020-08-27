@@ -225,41 +225,6 @@ LagCorrPlot <- function(lag.df, title = "Mean lag time of the column stations to
   g1
 } #end LagCorrPlot
 
-
-##----------------------------------------------------------------------------##
-# NOTE: Unneccessery! Just use dyEvents
-
-#' Events wrapper for dygraph
-#'
-#' @description Extends \link[dygraphs]{dyEvent} to allow multiple areas to be ploted at once.
-#'
-#' @param dygraph Dygraph to add events to.
-#' @param from Date/time or numeric vector to shade from (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
-#' @param to Date/time or numeric vector to shade to (for date/time this must be a as.POSIXct object or another object convertible via as.POSIXct).
-#' @param color Color of shading. This can be of the form "#AABBCC" or "rgb(255,100,200)" or "yellow". Defaults to a very light gray.
-#' @param axis Axis to apply shading. Choices are "x" or "y".
-#'
-#' @import dygraphs
-#' @note See the
-#'   \href{https://rstudio.github.io/dygraphs/gallery-annotations.html}{online
-#'   documentation} for additional details and examples.
-#' @return A dygraph with the specified events.
-#'
-dyEvents <- function(dygraph, x, label, ...){
-  if(length(x) != length(label) & length(label) != 1)
-    stop(paste0("'label' must be of length 1 or length(x).
-                \n length(x) = ",length(x), ", length(label) = ", length(label)))
-  if(length(label) < 1) stop("'label' must be at least of length 1!")
-
-  for(ii in 1:length(x)){
-    dygraph <- dygraph %>%
-      dyEvent(x = x[ii], label = ifelse(length(label) ==1, label, label[ii]),
-                ...)
-  }
-  dygraph
-}
-
-
 ##----------------------------------------------------------------------------##
 #' Save dygraph to file
 #'
@@ -365,7 +330,7 @@ plot_dim <- function (dim = c(NA, NA), scale = 1, units = c("in", "cm", "mm"), l
 #' @export
 #'
 #' @examples
-#'   {# NOT RUN #
+#'   \dontrun{
 #'   library(ggplot)
 #'   g1 <-
 #'   ggplot(mpg, aes(hwy,cty)) +

@@ -11,5 +11,5 @@ Sys.setenv(TZ='Etc/GMT-1')
 
 #==============================================================================#
 ## HOAL zones ####
-HOALzone <- PiezoInstall()[,c("Station","Group")]
-HOALzone$Group <- as.factor(HOALzone$Group)
+# HOALzone <- PiezoInstall()[,c("Station","Group")]
+# HOALzone$Group <- as.factor(HOALzone$Group)
