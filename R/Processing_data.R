@@ -120,7 +120,7 @@ ManualMeasurments <- function(st = NA,
   file <- man.meas.file
 
   # all piezometers
-  df <- data.frame(read_excel(file, sheet = "Manual_measurements",
+  df <- data.frame(readxl::read_excel(file, sheet = "Manual_measurements",
                               na = c("-", "x", "?", "X"), skip = 3,
                               col_names = c("Date","Time","Station","h", "comment"),
                               col_types = c("date", "date", "text", "numeric", "text")))
@@ -239,13 +239,14 @@ PiezoInstall <- function(st = NULL,
                           skip = 3,
                           na = c("x","?","-","X","NA"),
                           col_names = c("Station", "X","Y", "Z", "PipeHeight","TotalDepth",
-                                        "ScreenSt", "ScreenEnd", "CurrentDiver", "DiverType",
+                                        "ScreenSt", "ScreenEnd", "DiverCurrent", "DiverType", "DiverDepth",
                                         "PipeColor","Status", "InstallationDate","Group","Comments"))
+
 
 
   if(!is.null(st)) df <- subset(df, Station == st)
 
-  return(df)
+  return(as.data.frame(df))
 }
 
 #------------------------------------------------------------------------------#
