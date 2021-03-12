@@ -16,20 +16,32 @@
 #'
 MONread <- function(filename, tzone = "Etc/GMT-1"){
   # reading MON file to data frame
-  df <- data.table::fread(file = filename, header = F, data.table = F,
-              skip = 54, nrows = (length(readLines(filename))-54-1))
 
-  # column names
-  colnames(df) <- c("date", "time", "pDiver", "TDiver")
-  # change value type
-  df$pDiver <- as.numeric(df$pDiver)
-  df$TDiver <- as.numeric(df$TDiver)
+  df <-
+    suppressWarnings(
+    readr::read_delim(file = filename,
+                          delim = " ",
+                          skip = 54, # skip header
+                          trim_ws = T,
+                          progress = F,
+                          #n_max = as.numeric(readLines(filename)[54]), # read the number of records
+                          n_max = (length(readLines(filename))-54-1),
+                          col_types = "ccdd",
+                          col_names = c("date", "time", "pDiver", "TDiver"))
+    )
+
+  # make sure there are no NA values
+  df <- df[complete.cases(df),]
+
   # add a column with combined date and time (as POSIXct)
-  df$datetime <- as.POSIXct(paste(df[,1],df[,2]), tz = tzone,
-                            format = "%Y/%m/%d %H:%M:%S")
+  # df$datetime <- lubridate::ymd_hms(paste(df$date, df$time), tz = tzone, truncated = 3)
+  # df$datetime <- as.POSIXct(paste(df$date, df$time), tz = tzone, format = "%Y/%m/%d %H:%M:%S")
+  #df$datetime <- lubridate::fast_strptime(paste(df$date, df$time), tz = tzone, format = "%Y/%m/%d %H:%M:%OS", lt = F)
+  df$datetime <- lubridate::parse_date_time(paste(df$date, df$time), tz = tzone, truncated = 3, orders =  "%Y/%m/%d %H:%M:%S")
+
 
   #convert data frame to xts object
-  df <- xts::xts(df[,3:4], order.by = df[,5], tzone = tzone)
+  df <- xts::xts(df[,3:4], order.by = df$datetime, tzone = tzone)
 
   # adding metadata
   attr(df, "comment") <- base::readLines(filename, n = 51)
@@ -332,3 +344,73 @@ MONshift <- function(filename, shift, unit = "hours"){
     fs::file_delete(filename[i])
   }
 }
+
+#------------------------------------------------------------------------------#
+
+#' Combine MON files
+#'
+#' @param files_in character vector of MON filenames
+#' @param file_out character. Filename for output MON file
+#' @param location optional character. Location name, e.g. station name. Read from first MON file.
+#'
+#' @details Takes the data from \code{files_in} and adds it together. Files are ordered by starting time.
+#'    Header inforamtion is taken from the first file.
+#'
+#' @return saves combined data to MON file
+#' @export
+#'
+MONcomb <- function(files_in, file_out, location){
+  require(stringr)
+
+  # Start and end end date of MON files
+  date_start <- as.POSIXct(stringr::str_extract(files_in, "[[:digit:]]{12}(?=_till_)"),
+                            format = "%Y%m%d%H%M", tz = "Etc/GMT-1")
+
+  # order files by time
+  files_in <- files_in[order(date_start)]
+
+  # Read all MON files
+  lst <- lapply(files_in, readLines)
+
+  # Determine location name from file
+  if(missing(location)){
+    location <-
+      stringr::str_extract(grep(x = lst[[1]],
+                                pattern = "(Location\\h+=)",
+                                value = T,
+                                perl = T)[1],
+                           "(?<= =).+$")
+  }
+
+  # find line where data starts
+  ln_data_start <- sapply(lst,
+                    function(x){
+                      grep(x = x, pattern = "(\\[Data\\])")
+                    })
+
+  # find number of data lines
+  n_data <- sapply(lst,
+                   function(x){
+                     as.numeric(x[grep(x = x, pattern = "(\\[Data\\])") + 1])
+                   })
+
+  # lines with data
+  lns_data <- data.frame(file = files_in,
+                         start = ln_data_start + 2,
+                         end = ln_data_start + 1 + n_data)
+
+  # combining data
+  data <- c(lst[[1]][0:ln_data_start[1]],
+            sum(n_data),
+            unlist(
+              sapply(1:length(files_in),
+                     function(x){lst[[x]][lns_data[x, "start"]:lns_data[x, "end"]]
+                     }
+                   )
+              )
+            )
+
+  writeLines(data, file_out)
+}
+
+
