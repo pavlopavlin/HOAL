@@ -420,6 +420,7 @@ make.ind.unique <- function(x, FUN = "mean"){
 #'
 #' @param x An xts object.
 #' @param FUN Function for data aggregation at dupplicate timesteps.
+#' @param by optional character of a format "k unit", where k is an integer and unit a valid time unit (e.g. hours)
 #'
 #' @return A regular xts object
 #' @export
@@ -434,8 +435,9 @@ make.ind.unique <- function(x, FUN = "mean"){
 #' x.dupl <-x[c(1,2,3,3,4:20),]
 #' xtsreg(x.dupl)
 #' }
-xtsreg <- function(x,FUN="mean"){
-  by <-  as.numeric(median(diff(zoo::index(x))),units="secs")
+xtsreg <- function(x,FUN="mean", by){
+  if(missing(by)) by <-  as.numeric(median(diff(zoo::index(x))),units="secs")
+
   reg <- xts::xts(order.by = seq(start(x),end(x), by = by))
   x_unique <- HOAL::make.ind.unique(x, FUN = FUN)
   x_new <- xts::merge.xts(x_unique,reg)
