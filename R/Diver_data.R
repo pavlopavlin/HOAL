@@ -19,15 +19,15 @@ MONread <- function(filename, tzone = "Etc/GMT-1"){
 
   df <-
     suppressWarnings(
-    readr::read_delim(file = filename,
-                          delim = " ",
-                          skip = 54, # skip header
-                          trim_ws = T,
-                          progress = F,
-                          #n_max = as.numeric(readLines(filename)[54]), # read the number of records
-                          n_max = (length(readLines(filename))-54-1),
-                          col_types = "ccdd",
-                          col_names = c("date", "time", "pDiver", "TDiver"))
+      readr::read_delim(file = filename,
+                        delim = " ",
+                        skip = 54, # skip header
+                        trim_ws = T,
+                        progress = F,
+                        #n_max = as.numeric(readLines(filename)[54]), # read the number of records
+                        n_max = (length(readLines(filename))-54-1),
+                        col_types = "ccdd",
+                        col_names = c("date", "time", "pDiver", "TDiver"))
     )
 
   # make sure there are no NA values
@@ -364,7 +364,7 @@ MONcomb <- function(files_in, file_out, location){
 
   # Start and end end date of MON files
   date_start <- as.POSIXct(stringr::str_extract(files_in, "[[:digit:]]{12}(?=_till_)"),
-                            format = "%Y%m%d%H%M", tz = "Etc/GMT-1")
+                           format = "%Y%m%d%H%M", tz = "Etc/GMT-1")
 
   # order files by time
   files_in <- files_in[order(date_start)]
@@ -384,9 +384,9 @@ MONcomb <- function(files_in, file_out, location){
 
   # find line where data starts
   ln_data_start <- sapply(lst,
-                    function(x){
-                      grep(x = x, pattern = "(\\[Data\\])")
-                    })
+                          function(x){
+                            grep(x = x, pattern = "(\\[Data\\])")
+                          })
 
   # find number of data lines
   n_data <- sapply(lst,
@@ -406,9 +406,9 @@ MONcomb <- function(files_in, file_out, location){
               sapply(1:length(files_in),
                      function(x){lst[[x]][lns_data[x, "start"]:lns_data[x, "end"]]
                      }
-                   )
               )
             )
+  )
 
   writeLines(data, file_out)
 }

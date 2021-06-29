@@ -4,7 +4,7 @@
 #'
 #' Calculates the mean daily potential evapotranspiration by modified Blaney-Criddle method
 #'
-#' @param Temp xts or coercable to xts. At least daily air temperature.
+#' @param Temp xts or data.frame of mean daily temperature.
 #' @param SI vector of solar indices for each month of the year (\code{length(SI) == 12}).
 #'   If NULL, the defaults for HOAL will be used.
 #' @details This method uses Solar indices
@@ -12,21 +12,40 @@
 #'   Potential daily sunshine duration from
 #'   Meszaroš et al. 2002, Parajka et al. 2003.
 #'
-#' @return xts of daily PET
+#' @return xts or data.frame of daily PET in mm/day
 #' @export
-potET <- function(Temp, SI = NULL){
-  if (!is.xts(Temp) || !is.zoo(Temp)) {
-    try(Temp <- xts(Temp[,2], order.by = Temp[,1]))
-  }
-
+PET_Blaney <- function(Temp, SI = NULL, PETmin = 0, PETmax = 30){
   if(is.null(SI)){
     SI <- c(0.1966, 0.2341, 0.2715, 0.3090, 0.3464, 0.3652,
             0.3558, 0.3277, 0.2856, 0.2481, 0.2060, 0.1873)
   }
-  Temp <- to_timestep(Temp,by = "days")
-  Temp$month <- lubridate::month(Temp)
-  PET <- -1.55 + 0.96*(8.128 + 0.457 * Temp[,1])*SI[Temp[,2]]
-  names(PET) <- "PET(mm/day)"
+
+  if (is.xts(Temp)) {
+    Temp <- to_timestep(Temp,by = "days")
+    month <- lubridate::month(Temp)
+    PET <- -1.55 + 0.96*(8.128 + 0.457 * Temp[,1])*SI[month]
+    names(PET) <- "PET"
+    PET[PET$PET > PETmax] <- NA
+    PET[PET$PET < PETmin] <- 0
+  }else if(is.data.frame(Temp)){
+    require(dplyr)
+    PET <-
+      Temp %>%
+      mutate(Month = lubridate::month(Temp[,1]),
+             SI = SI[Month],
+             PET = -1.55 + 0.96*(8.128 + 0.457 * .[,2]) * SI,
+             PET = case_when(
+               PET > PETmax ~ NA_real_,
+               PET < PETmin ~ 0,
+               TRUE ~ PET
+             )
+      ) %>%
+      select(colnames(Temp)[1], "PET")
+
+  } else{
+    stop(paste0("Input data must be an 'xts' or data.frame' object not ", class(Temp)))
+  }
+
   return(PET)
 }
 
