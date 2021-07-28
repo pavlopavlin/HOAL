@@ -15,13 +15,15 @@
 #' @param by Time step as a character (e.g. "30 secs" "mins", "hours", "6 hours")
 #'   or numeric number of seconds.
 #' @param FUN Aggregation function (e.g. mean, sum).
-#' @param force Logical. Set to TRUE to ignore \code{x} periodicity.
+#' @param force Depricated.Logical. Set to TRUE to ignore \code{x} periodicity.
 #' @param interpolation Type of interpoletion method: "linear" or "spline".
 #' @param maxgap Intiger. How many missing time steps are still interpolated.
+#' @param na.rm logical. Should missing values (including NaN) be removed?
 #'
 #' @return An xts object.
 #' @export
 #'
+#' @details
 #' @examples
 #' \dontrun{
 #' # sample data
@@ -33,12 +35,11 @@
 #' x.hourly <- to_timestep(sample_xts, by = "12 hours")
 #' }
 #'
-to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear", "spline"), maxgap = 20L){
+to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear", "spline"),
+                        maxgap = 20L, na.rm = TRUE){
 
   #args cleanup
   interpolation <- match.arg(interpolation)
-  first = xts::first
-  last = xts::last
 
   if(!is.xts(x) | nrow(x) < 2){
     stop("'x' must be an xts object with minimum 2 observation.")
@@ -111,7 +112,10 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
     stop("invalid 'by'. Must be character")
   }
 
-  ## Chose what to do based on comparrison of 'p' and 'by'
+
+
+
+  ## Chose what to do based on comparison of 'p' and 'by'
   step <- paste(by2[1], by2[2])
 
   ## rounding function
@@ -120,24 +124,8 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
     rounding <- lubridate::floor_date
   }
 
-  # 'p' and 'by' are same
-  if (p == by){
-    if (force == F){
-      # return unchanged 'x'
-      return(x)
-
-    }else if (force == T){
-      # rounded start and end time stamps
-      st <- rounding(zoo::index(xts::first(x)), step)
-      ed <- rounding(zoo::index(xts::last(x)) + p - by, step)
-      # endpoints
-      ep <- lubridate::floor_date(zoo::index(x), step)
-      # averaging to time stamp
-      x_new <- xts(do.call(stats::aggregate, args = list(x = x, by = ep, FUN = FUN, na.rm = TRUE)))
-    }
-
-    # time step of 'x' is longer as specified by 'by' - interpolation
-  }else if (p > by){
+  # time step of 'x' is longer as specified by 'by' - interpolation
+  if (p > by){
     # rounded start and end time stamps
     st <- rounding(index(xts::first(x)), step)
     ed <- rounding(index(xts::last(x)), step)
@@ -147,20 +135,35 @@ to_timestep <- function(x, by, FUN = mean, force = F, interpolation = c("linear"
     if (interpolation == "spline") x_new <- zoo::na.spline(x, xout = g, maxgap = maxgap)
 
 
-    # time step of 'x' is shorter as specified by 'by' - averaging
-  }else if (p < by){
+    # time step of 'x' is shorter as specified by 'by' - aggregating
+  }else if (p <= by){
     # rounded start and end time stamps
-    st <- rounding(index(xts::first(x)), step)
-    ed <- rounding(index(xts::last(x)), step)
+    st <- rounding(index(xts::first(x)), unit = by2[2])
+    # ed <- rounding(zoo::index(xts::last(x)), unit = by2[2])
     # endpoints
-    ep <- lubridate::floor_date(zoo::index(x), step)
+    # ep <- lubridate::floor_date(zoo::index(x), step)
+
+    if(valid <= 5){ #up to weeks
+      ep <- as.double((zoo::index(x) - st), units = by2[2]) %/% as.numeric(by2[1]) + 1
+    }else if(valid == 6){ #months
+      ep <- (lubridate::year(x) - lubridate::year(st)) * 12 +
+        (lubridate::month(x) - lubridate::month(st)) %/% as.numeric(by2[1]) +1
+    }else if(valid == 7){#years
+      ep <- (lubridate::year(x) - lubridate::year(st)) %/% as.numeric(by2[1]) +1
+    }else if(valid == 8){# quarters
+      ep <- (lubridate::year(x) - lubridate::year(st)) * 4 +
+        (lubridate::quarter(x) - lubridate::quarter(st)) %/% as.numeric(by2[1]) +1
+    }
+    ep <- seq(st, length.out = max(ep), by = step)[ep]
+
     # averaging to time stamp
-    x_new <- xts(do.call(stats::aggregate, args = list(x = x, by = ep, FUN = FUN, na.rm = TRUE)))
+    x_new <- xts(do.call(stats::aggregate, args = list(x = x, by = ep, FUN = FUN, na.rm = na.rm)))
   }
 
   names(x_new) <- names(x)
   return(x_new)
 }# End function to_timestep
+
 
 #------------------------------------------------------------------------------#
 
